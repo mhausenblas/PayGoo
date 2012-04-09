@@ -7,7 +7,7 @@ import org.joda.time.LocalDate
 package info.paygoo.core {
 	
 	/** 
-	 * Represent a PayGoo's serialisation (aka wire format).
+	 * Represents a PayGoo's serialisation (aka wire format).
 	 * A PayGoo MUST support all of the following four media types.
 	 * 
 	 * @param mediatype as of http://www.iana.org/assignments/media-types/
@@ -21,12 +21,20 @@ package info.paygoo.core {
 	/** 
 	 * The core PayGoo class, just has a label. 
 	 * 
+	 * @param id the PayGoo identifier, MUST be a HTTP URI
 	 * @param label a human-readable label for the PayGoo
 	 */
-	abstract class PayGoo (val base: String, var label: String ) {
+	abstract class PayGoo (val pgid: String, var label: String ) {
 		val s = Vocabulary( "http://schema.org/" )
 		val dc = Vocabulary( "http://purl.org/dc/terms/" )
 		val bp = Vocabulary( "http://open-services.net/ns/basicProfile#" )
+		
+		/** 
+		 * Returns a serialisation in the specified format, defaults to JSON.
+		 * 
+		 * @param format the selected wire format, one of {HTML, JSON, Text, NTriple}
+		 * @return a string representation in the selected wire format
+		 */
 		def ser( format: WireFormat = JSON ) : String
 	}
 
@@ -36,35 +44,38 @@ package info.paygoo.core {
 	 * @param rlabel a human-readable label for the PayGoo resource
 	 * @return dunno
 	 */
-	case class PayGooResource (rbase: String, rlabel: String ) extends PayGoo ( rbase, rlabel ) {
-		private var r = Map ( "base" -> rbase, "label" -> rlabel, "date" -> new LocalDate())
-		private val rself = r("base") + "it"
+	case class PayGooResource (rpgid: String, rlabel: String ) extends PayGoo ( rpgid, rlabel ) {
+		private var r = Map ( "id" -> rpgid, "label" -> rlabel, "modified" -> new LocalDate())
 		
 		override def ser ( format: WireFormat = JSON ) : String = format match {
-			case HTML => "<div>About <a href='" + rself + "'>" + r("label") + "</a>, last updated " + r("date") + "</div>"
+			case HTML => "<div>About <a href='" + r("id") + "'>" + r("label") + "</a>, last updated " + r("modified") + "</div>"
 			case JSON => JSONObject(r).toString
-			case Text => "base=" + r("base") + ", label=" + r("label") + ", date=" + r("date") 
-			case NTriple => val g = Graph.build(	UriRef( rself ) - (
+			case Text => "id=" + r("id") + ", label=" + r("label") + ", modified=" + r("modified") 
+			case NTriple => val g = Graph.build(	UriRef( r("id").toString ) - (
 													RDF.Type -> s.uriref("Thing"),
 													dc.uriref("title") ->  r("label"),
-													dc.uriref("date") ->  r("date")
+													dc.uriref("modified") ->  r("modified")
 												)
 									)
 									g.rend
 		}
 
-		override def toString = "[PayGooResource: base=" + r("base") + " | label=" + r("label") + " | date=" + r("date") + "]"
+		override def toString = "[PayGooResource: id=" + r("id") + " | label=" + r("label") + " | modified=" + r("modified") + "]"
 	}
 
 	
 	/** 
-	 * Testing the resource ... 
+	 * Testing a sample PayGoo resource.
 	 */
 	object PayGooResource extends App {
-		val r = new PayGooResource("http://data.example.com/test#", "pg0")
+		val r = new PayGooResource("http://data.example.com/#it", "pg0")
+		println("As HTML:")
 		println(r.ser(format=HTML))
+		println("\nAs JSON:")
 		println(r.ser(format=JSON))
+		println("\nAs plain text:")
 		println(r.ser(format=Text))
+		println("\nAs RDF/NTriple:")
 		println(r.ser(format=NTriple))
 		println(r)
 	}
