@@ -8,11 +8,11 @@ After you got the source somewhere local (via git clone or download facility) yo
 
 	scalac -cp lib/scardf-0.6-SNAPSHOT.jar:lib/joda-time-1.6.jar info.paygoo.core.scala
 
-Then you can run the built-in test:
+Then you can run the built-in test like so:
 
 	scala -cp lib/scardf-0.6-SNAPSHOT.jar:lib/joda-time-1.6.jar info.paygoo.core.PayGooResource
 
-...which should yield something like the following:
+... which should yield something like the following:
 
 	As HTML:
 	<div>About <a href='http://data.example.com/#it'>pg0</a>, last updated 2012-04-09</div>
