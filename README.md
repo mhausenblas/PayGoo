@@ -14,7 +14,7 @@ Then you can run the built-in test:
 
 ...which should yield something like the following:
 
-	<div>About <a href="http://data.example.com/test#it">pg0</a>, last updated 2012-04-09</div>
+	<div>About &lt;a href=&quot;http://data.example.com/test#it&quot;&gt;pg0&lt;/a&gt;, last updated 2012-04-09</div>
 	{"base" : "http:\/\/data.example.com\/test#", "label" : "pg0", "date" : 2012-04-09}
 	base=http://data.example.com/test#, label=pg0, date=2012-04-09
 	<http://data.example.com/test#it> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://schema.org/Thing> .
