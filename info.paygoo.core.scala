@@ -43,7 +43,7 @@ package info.paygoo.core {
 	 * The PayGoo resource class. 
 	 */
 	case class PayGooResource (rpgid: String, rlabel: String ) extends PayGoo ( rpgid, rlabel ) {
-		private var r = Map ( "id" -> rpgid, "label" -> rlabel, "modified" -> new LocalDate())
+		private var r = Map ( "id" -> rpgid, "label" -> rlabel, "modified" -> new LocalDate().toString)
 		
 		override def ser ( format: WireFormat = JSON ) : String = format match {
 			case HTML => "<div>About <a href='" + r("id") + "'>" + r("label") + "</a>, last updated " + r("modified") + "</div>"
@@ -59,6 +59,8 @@ package info.paygoo.core {
 		}
 
 		override def toString = "[PayGooResource: id=" + r("id") + " | label=" + r("label") + " | modified=" + r("modified") + "]"
+		
+		def raw = r
 	}
 	
 	/** 
@@ -81,7 +83,7 @@ package info.paygoo.core {
 	 * The PayGoo container class. 
 	 */
 	case class PayGooContainer (cpgid: String, clabel: String ) extends PayGoo ( cpgid, clabel ) {
-		private var c = Map ( "id" -> cpgid, "label" -> clabel, "modified" -> new LocalDate())
+		private var c = Map ( "id" -> cpgid, "label" -> clabel, "modified" -> new LocalDate().toString)
 		private var members = ArrayBuffer[PayGooResource]()
 		
 		override def ser ( format: WireFormat = JSON ) : String = format match {
@@ -108,17 +110,16 @@ package info.paygoo.core {
 			ret
 		}
 		
-		//TODO: use proper JSON serialiser instead ...
 		def serContainerJSON : String = {
-			var ret : String = "no members"
-			val m = for ( i <- 0 until members.length ) yield members(i).ser()
-			var con = Map ( "container" -> JSONObject(c), "members" ->  m )
+			var ret : String = "{}"
 			
-			if ( !members.isEmpty ) ret = JSONObject(con).toString
+			if ( !members.isEmpty ){
+				val m = for ( i <- 0 until members.length ) yield members(i).raw("id")
+				var con = Map ( "container" -> JSONObject(c), "members" ->  JSONArray(m.toList) )
+				ret = JSONObject(con).toString	
+			} 
 			ret
 		}
-		
-		
 
 		override def toString = "[PayGooContainer: id=" + c("id") + " | label=" + c("label") + " | modified=" + c("modified") + "]"
 		

@@ -10,31 +10,49 @@ After you got the source somewhere local (via git clone or download facility) yo
 
 Then you can run the built-in test like so:
 
-	scala -cp lib/scardf-0.6-SNAPSHOT.jar:lib/joda-time-1.6.jar info.paygoo.core.PayGooResource
+	scala -cp lib/scardf-0.6-SNAPSHOT.jar:lib/joda-time-1.6.jar info.paygoo.core.PayGooContainer
 
 ... which should yield something like the following:
 
 	As HTML:
-	<div>About <a href='http://data.example.com/#it'>pg0</a>, last updated 2012-04-09</div>
+	<div>About <a href='http://data.example.com/#container'>a simple container</a>, last updated 2012-04-10 containing: no members</div>
 
 	As JSON:
-	{"id" : "http:\/\/data.example.com\/#it", "label" : "pg0", "modified" : 2012-04-09}
+	{}
 
 	As plain text:
-	id=http://data.example.com/#it, label=pg0, modified=2012-04-09
+	id=http://data.example.com/#container, label=a simple container, modified=2012-04-10
 
 	As RDF/NTriple:
-	<http://data.example.com/#it> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://schema.org/Thing> .
-	<http://data.example.com/#it> <http://purl.org/dc/terms/title> "pg0" .
-	<http://data.example.com/#it> <http://purl.org/dc/terms/modified> "2012-04-09"^^<http://www.w3.org/2001/XMLSchema#date> .
+	<http://data.example.com/#container> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://open-services.net/ns/basicProfile#Container> .
+	<http://data.example.com/#container> <http://purl.org/dc/terms/title> "a simple container" .
+	<http://data.example.com/#container> <http://purl.org/dc/terms/modified> "2012-04-10" .
 
-	[PayGooResource: id=http://data.example.com/#it | label=pg0 | modified=2012-04-09]
+	[PayGooContainer: id=http://data.example.com/#container | label=a simple container | modified=2012-04-10]
+
+
+	Now adding resource 1 and resource 2
+
+	As HTML:
+	<div>About <a href='http://data.example.com/#container'>a simple container</a>, last updated 2012-04-10 containing: <div>About <a href='http://data.example.com/#res1'>resource 1</a>, last updated 2012-04-10</div><div>About <a href='http://data.example.com/#res2'>resource 2</a>, last updated 2012-04-10</div></div>
+
+	As JSON:
+	{"container" : {"id" : "http:\/\/data.example.com\/#container", "label" : "a simple container", "modified" : "2012-04-10"}, "members" : ["http:\/\/data.example.com\/#res1", "http:\/\/data.example.com\/#res2"]}
+
+
+	Now removing resource 1
+
+	As HTML:
+	<div>About <a href='http://data.example.com/#container'>a simple container</a>, last updated 2012-04-10 containing: <div>About <a href='http://data.example.com/#res2'>resource 2</a>, last updated 2012-04-10</div></div>
+
+	As JSON:
+	{"container" : {"id" : "http:\/\/data.example.com\/#container", "label" : "a simple container", "modified" : "2012-04-10"}, "members" : ["http:\/\/data.example.com\/#res2"]}
 	
 ## Dependencies
 
 * Tested against Scala 2.9.1
 * Using [scardf](http://code.google.com/p/scardf/ "Scala RDF API - Google Project Hosting") for RDF parsing and serialisation
-* Using [spray](spray.cc "A suite of lightweight Scala libraries for building and consuming RESTful web services on top of Akka") for HTTP interfacing
+* Using Scalatra for HTTP interfacing
 
 ## License
 
