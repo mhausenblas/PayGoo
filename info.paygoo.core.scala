@@ -66,6 +66,7 @@ package info.paygoo.core {
 	 */
 	object PayGooResource extends App {
 		val r = new PayGooResource("http://data.example.com/#res", "a simple resource")
+		println(r)
 		println("As HTML:")
 		println(r.ser(format=HTML))
 		println("\nAs JSON:")
@@ -74,7 +75,6 @@ package info.paygoo.core {
 		println(r.ser(format=Text))
 		println("\nAs RDF/NTriple:")
 		println(r.ser(format=NTriple))
-		println(r)
 	}
 	
 	/** 
@@ -171,21 +171,9 @@ package info.paygoo.core {
 		val c = new PayGooContainer("http://data.example.com/#container", "a simple container")
 		val r1 = new PayGooResource("http://data.example.com/#res1", "resource 1")
 		val r2 = new PayGooResource("http://data.example.com/#res2", "resource 2")
-		
-		println(c)
-		
-		println("As HTML:")
-		println(c.ser(format=HTML))
-		println("\nAs JSON:")
-		println(c.ser(format=JSON))
-		println("\nAs plain text:")
-		println(c.ser(format=Text))
-		println("\nAs RDF/NTriple:")
-		println(c.ser(format=NTriple))
-
-		println("\nNow adding " + r1.label + " and " + r2.label)
 		c.add(r1)
 		c.add(r2)
+		println(c)
 		println("\nAs HTML:")
 		println(c.ser(format=HTML))
 		println("\nAs JSON:")
