@@ -6,6 +6,7 @@ package info.paygoo.core {
 	import scala.util.parsing.json._
 	import org.scardf._
 	import org.joda.time.LocalDate
+	import info.paygoo.vocab._
 	
 	/** 
 	 * Represents a PayGoo's serialisation (aka wire format).
@@ -26,9 +27,6 @@ package info.paygoo.core {
 	 * @param label a human-readable label for the PayGoo
 	 */
 	abstract class PayGoo (val pgid: String, var label: String ) {
-		val s = Vocabulary( "http://schema.org/" )
-		val dc = Vocabulary( "http://purl.org/dc/terms/" )
-		val bp = Vocabulary( "http://open-services.net/ns/basicProfile#" )
 		
 		/** 
 		 * Returns a serialisation in the specified format, defaults to JSON.
@@ -50,9 +48,9 @@ package info.paygoo.core {
 			case JSON => JSONObject(r).toString
 			case Text => "id=" + r("id") + ", label=" + r("label") + ", modified=" + r("modified") 
 			case NTriple => val g = Graph.build(	UriRef( r("id").toString ) - (
-													RDF.Type -> s.uriref("Thing"),
-													dc.uriref("title") ->  r("label"),
-													dc.uriref("modified") ->  r("modified")
+													RDF.Type -> SchemaOrg.Thing,
+													DC.title ->  r("label"),
+													DC.modified ->  r("modified")
 												)
 									)
 									g.rend
@@ -134,9 +132,9 @@ package info.paygoo.core {
 			if ( !members.isEmpty ){
 				val m = for ( i <- 0 until members.length ) yield members(i).raw("id")
 				var g = Graph.build(	UriRef( c("id").toString ) - (
-														RDF.Type -> bp.uriref("Container"),
-														dc.uriref("title") ->  c("label"),
-														dc.uriref("modified") ->  c("modified")
+														RDF.Type -> LDBP.Container,
+														DC.title ->  c("label"),
+														DC.modified ->  c("modified")
 													)
 										)
 				for (m <- members)
