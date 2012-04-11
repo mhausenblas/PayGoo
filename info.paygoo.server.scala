@@ -50,7 +50,9 @@ package info.paygoo.server {
 		
 		def handle(exchange: HttpExchange) = {
 			val h = exchange.getRequestHeaders()
+			var q = exchange.getRequestURI.toString
 			var accept = "text/html"
+
 			// heads-up: very naive conneg implementation following
 			if (h.containsKey("Accept")) {
 				// danger, the following is really a nasty hack: 
@@ -59,6 +61,22 @@ package info.paygoo.server {
 				// see also http://tools.ietf.org/html/rfc2616#section-14.1
 				accept = h.getFirst("Accept").split(",")(0)
 			}
+			
+			// a query paramter such as ?json or ?html indicating the desired format overwrites conneg
+			if(q contains "?") {
+				try {
+					q = q.split("\\?")(1)
+					q match {
+						case "html" => accept = HTML.mediatype
+						case "json" => accept = JSON.mediatype
+						case "ntriple" => accept = NTriple.mediatype
+						case _ => accept = HTML.mediatype
+					}
+				} catch {
+					case ex: Exception => respond(exchange, 500, ex.toString)
+				}
+			}
+			
 			// essentially map to combintation of media type + path (as a key):
 			mappings.get(accept + " " + exchange.getRequestURI.getPath) match {
 				case None => respond(exchange, 404)
@@ -92,9 +110,6 @@ package info.paygoo.server {
 		get("/bpc0", JSON.mediatype) {
 			c.ser(format=JSON)
 		}
-		get("/bpc0", Text.mediatype) {
-			c.ser(format=Text)
-		}
 		get("/bpc0", NTriple.mediatype) {
 			c.ser(format=NTriple)
 		}
@@ -102,9 +117,21 @@ package info.paygoo.server {
 		get("/res1") {
 			r1.ser(format=HTML)
 		}
+		get("/res1", JSON.mediatype) {
+			r1.ser(format=JSON)
+		}
+		get("/res1", NTriple.mediatype) {
+			r1.ser(format=NTriple)
+		}
 		
 		get("/res2") {
 			r2.ser(format=HTML)
+		}
+		get("/res2", JSON.mediatype) {
+			r2.ser(format=JSON)
+		}
+		get("/res2", NTriple.mediatype) {
+			r2.ser(format=NTriple)
 		}
 		
 	}
