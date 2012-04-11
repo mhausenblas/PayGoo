@@ -4,6 +4,8 @@ An object-orient implementation of '[Linked Data Basic Profile](http://www.w3.or
 
 ## Usage
 
+### Bare-bone 
+
 After you got the source somewhere local (via git clone or download facility) you want to compile it:
 
 	scalac -cp lib/scardf-0.6-SNAPSHOT.jar:lib/joda-time-1.6.jar info.paygoo.core.scala
@@ -31,7 +33,39 @@ Then you can run the built-in test like so:
 	<http://data.example.com/#container> <http://purl.org/dc/terms/title> "a simple container" .
 	<http://data.example.com/#container> <http://www.w3.org/2000/01/rdf-schema#member> "http://data.example.com/#res1" .
 	<http://data.example.com/#container> <http://purl.org/dc/terms/modified> "2012-04-11" .
+
+### RESTful interaction
+
+Now to something more fun. Some RESTful interaction. Compile the server like so:
+
+	scalac -cp lib/scardf-0.6-SNAPSHOT.jar:lib/joda-time-1.6.jar info.paygoo.server.scala
+
+And then run it with:
+
+	scala -cp lib/scardf-0.6-SNAPSHOT.jar:lib/joda-time-1.6.jar info.paygoo.server.PayGooServer
+
+After that, point your Web browser to `http://localhost:6969/bpc0` and you should see an HTML rendering. If you prefer some command-line noodling using curl, here you go:
+
+	$ curl -H "Accept:application/json" http://localhost:6969/bpc0
 	
+	{"container" : {"id" : "http:\/\/localhost:6969\/bpc0", "label" : "container 0", "modified" : "2012-04-11"}, "members" : ["http:\/\/localhost:6969\/res1", "http:\/\/localhost:6969\/res2"]}
+
+	$ curl http://localhost:6969/bpc0?ntriple
+	
+	<http://localhost:6969/bpc0> <http://purl.org/dc/terms/title> "container 0" .
+	<http://localhost:6969/bpc0> <http://www.w3.org/2000/01/rdf-schema#member> "http://localhost:6969/res1" .
+	<http://localhost:6969/bpc0> <http://www.w3.org/2000/01/rdf-schema#member> "http://localhost:6969/res2" .
+	<http://localhost:6969/bpc0> <http://purl.org/dc/terms/modified> "2012-04-11" .
+	<http://localhost:6969/bpc0> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://open-services.net/ns/basicProfile#Container> .
+
+	$ curl -H "Accept:application/json" http://localhost:6969/bpc0?html
+
+	<div>About <a href='http://localhost:6969/bpc0'>container 0</a>, last updated 2012-04-11 containing: <ul><li><a href='http://localhost:6969/res1'>resource 1</a></li><li><a href='http://localhost:6969/res2'>resource 2</a></li></ul></div>
+	
+You get the idea, right? Either you tell the PayGooServer via [conneg](http://en.wikipedia.org/wiki/Content_negotiation "Content negotiation - Wikipedia, the free encyclopedia") what format you prefer or you can specify it explicitly by appending a query parameter `?xxx` where xxx can be one of the following: `json`, `html` or `ntriple` which overwrites the conneg.
+	
+	
+
 ## Dependencies
 
 * Tested against Scala 2.9.1
