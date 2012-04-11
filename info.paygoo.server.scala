@@ -10,55 +10,65 @@ package info.paygoo.server {
 	import info.paygoo.core._
 	
 	abstract class SimpleHttpServerBase(val socketAddress: String = "127.0.0.1", val port: Int = 6969, val backlog: Int = 0) extends HttpHandler {
-	  private val address = new InetSocketAddress(socketAddress, port)
-	  private val server = HttpServer.create(address, backlog)
-	  server.createContext("/", this)
+		private val address = new InetSocketAddress(socketAddress, port)
+		private val server = HttpServer.create(address, backlog)
+		server.createContext("/", this)
 
-	def redirect(url: String) =
-		<html>
-		  <head>
-			  <meta http-equiv="Refresh" content={"0," + url}/>
-		  </head>
-		  <body>
-			You are being redirected to:
-			<a href={url}>
-			  {url}
-			</a>
-		  </body>
-		</html>
+		def redirect(url: String) =
+			<html>
+			  <head>
+				  <meta http-equiv="Refresh" content={"0," + url}/>
+			  </head>
+			  <body>
+				You are being redirected to:
+				<a href={url}>
+				  {url}
+				</a>
+			  </body>
+			</html>
 
-	def respond(exchange: HttpExchange, code: Int = 200, body: String = "", mediatype: String = "text/html") {
-		val bytes = body.getBytes
-		var h = exchange.getResponseHeaders()	// added this to ...
-		h.add("Content-Type", mediatype)		// ... explicitly set the content type
-		exchange.sendResponseHeaders(code, bytes.size)
-		exchange.getResponseBody.write(bytes)
-		exchange.getResponseBody.write("\r\n\r\n".getBytes)
-		exchange.getResponseBody.close()
-		exchange.close()
-	}
+		def respond(exchange: HttpExchange, code: Int = 200, body: String = "", mediatype: String = "text/html") {
+			val bytes = body.getBytes
+			var h = exchange.getResponseHeaders()	// added this to ...
+			h.add("Content-Type", mediatype)		// ... explicitly set the content type
+			exchange.sendResponseHeaders(code, bytes.size)
+			exchange.getResponseBody.write(bytes)
+			exchange.getResponseBody.write("\r\n\r\n".getBytes)
+			exchange.getResponseBody.close()
+			exchange.close()
+		}
 
-	  def start() = server.start()
+		def start() = server.start()
 
-	  def stop(delay: Int = 1) = server.stop(delay)
+		def stop(delay: Int = 1) = server.stop(delay)
 	}
 
 	abstract class SimpleHttpServer extends SimpleHttpServerBase {
-		private val mappings = new HashMap[String, () => Any]
+		private val mappings = new HashMap[String, (String) => Any]
 		
-		def get(path: String)(action: => Any) = mappings += path -> (() => action)
+		def get(path: String, mediatype: String = "text/html")(action: => Any) = mappings += ( mediatype + " " + path ) -> ((mediatype) => action)
 		
-		def handle(exchange: HttpExchange) = mappings.get(exchange.getRequestURI.getPath) match {
-			case None => respond(exchange, 404)
-			case Some(action) =>
-				try {
-					// heads-up: very naive conneg implementation below ...
-					val h = exchange.getRequestHeaders()
-					if (h.containsKey("Accept")) respond(exchange, 200, action().toString, h.getFirst("Accept")) // if 'Accept' header is present, serve as requested
-					else respond(exchange, 200, action().toString) // defaults to text/html
-				} catch {
-					case ex: Exception => respond(exchange, 500, ex.toString)
-				}
+		def handle(exchange: HttpExchange) = {
+			val h = exchange.getRequestHeaders()
+			var accept = "text/html"
+			// heads-up: very naive conneg implementation following
+			if (h.containsKey("Accept")) {
+				// danger, the following is really a nasty hack: 
+				// in case a user agent, such a Web browser, sends 
+				// multiple desired types, simply take the first one.
+				// see also http://tools.ietf.org/html/rfc2616#section-14.1
+				accept = h.getFirst("Accept").split(",")(0)
+			}
+			// essentially map to combintation of media type + path (as a key):
+			mappings.get(accept + " " + exchange.getRequestURI.getPath) match {
+				case None => respond(exchange, 404)
+				case Some(action) =>
+					try {
+						respond(exchange, 200, action(accept).toString, accept) 
+					} catch {
+						case ex: Exception => respond(exchange, 500, ex.toString)
+					}
+			}
 		}
 	}
 
@@ -69,18 +79,24 @@ package info.paygoo.server {
 	 * @return dunno
 	 */
 	class PayGooServer extends SimpleHttpServer {
-		val c = new PayGooContainer("http://localhost:6969/bpc0", "container 0")
-		val r1 = new PayGooResource("http://localhost:6969/res1", "resource 1")
-		val r2 = new PayGooResource("http://localhost:6969/res2", "resource 2")
+		val BASE_URI = "http://localhost:6969"
+		val c = new PayGooContainer(BASE_URI + "/bpc0", "container 0")
+		val r1 = new PayGooResource(BASE_URI + "/res1", "resource 1")
+		val r2 = new PayGooResource(BASE_URI + "/res2", "resource 2")
 		c.add(r1)
 		c.add(r2)
-
-		get("/") {
-			redirect("/bpc0")
-		}
 		
 		get("/bpc0") {
 			c.ser(format=HTML)
+		}
+		get("/bpc0", JSON.mediatype) {
+			c.ser(format=JSON)
+		}
+		get("/bpc0", Text.mediatype) {
+			c.ser(format=Text)
+		}
+		get("/bpc0", NTriple.mediatype) {
+			c.ser(format=NTriple)
 		}
 		
 		get("/res1") {
