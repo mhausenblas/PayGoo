@@ -87,25 +87,20 @@ package info.paygoo.core {
 		private var members = ArrayBuffer[PayGooResource]()
 		
 		override def ser ( format: WireFormat = JSON ) : String = format match {
-			case HTML => "<div>About <a href='" + c("id") + "'>" + c("label") + "</a>, last updated " + c("modified") + " containing: " + serContainerHTML + "</div>"
-			case JSON => serContainerJSON	
-			case Text => "id=" + c("id") + ", label=" + c("label") + ", modified=" + c("modified") 
-			case NTriple => val g = Graph.build(	UriRef( c("id").toString ) - (
-													RDF.Type -> bp.uriref("Container"),
-													dc.uriref("title") ->  c("label"),
-													dc.uriref("modified") ->  c("modified")
-												)
-									)
-									g.rend
+			case HTML => serContainerHTML
+			case JSON => serContainerJSON
+			case Text => serContainerText 
+			case NTriple => serContainerNTriple
 		}
 		
 		def serContainerHTML : String = {
 			var ret : String = "no members"
 			
 			if ( !members.isEmpty ) {
-				ret = ""
+				ret = "<div>About <a href='" + c("id") + "'>" + c("label") + "</a>, last updated " + c("modified") + " containing: <ul>" 
 				for (m <- members)
-					ret += m.ser(format=HTML)
+					ret += "<li><a href='" + m.raw("id") + "'>" + m.raw("label") + "</a></li>"
+				ret += "</ul></div>"
 			}
 			ret
 		}
@@ -117,6 +112,36 @@ package info.paygoo.core {
 				val m = for ( i <- 0 until members.length ) yield members(i).raw("id")
 				var con = Map ( "container" -> JSONObject(c), "members" ->  JSONArray(m.toList) )
 				ret = JSONObject(con).toString	
+			} 
+			ret
+		}
+		
+		def serContainerText : String = {
+			var ret : String = "no members"
+			
+			if ( !members.isEmpty ) {
+				ret = "id=" + c("id") + ", label=" + c("label") + ", modified=" + c("modified") + ", containing: [" 
+				for (m <- members)
+					ret += m.ser(format=Text)
+				ret += "]"
+			}
+			ret
+		}
+		
+		def serContainerNTriple : String = {
+			var ret : String = ""
+			
+			if ( !members.isEmpty ){
+				val m = for ( i <- 0 until members.length ) yield members(i).raw("id")
+				var g = Graph.build(	UriRef( c("id").toString ) - (
+														RDF.Type -> bp.uriref("Container"),
+														dc.uriref("title") ->  c("label"),
+														dc.uriref("modified") ->  c("modified")
+													)
+										)
+				for (m <- members)
+					g = g ++  Graph.build( UriRef( c("id").toString ) - (RDFS.member -> m.raw("id").toString ) )
+				ret = g.rend
 			} 
 			ret
 		}
@@ -149,6 +174,8 @@ package info.paygoo.core {
 		val r1 = new PayGooResource("http://data.example.com/#res1", "resource 1")
 		val r2 = new PayGooResource("http://data.example.com/#res2", "resource 2")
 		
+		println(c)
+		
 		println("As HTML:")
 		println(c.ser(format=HTML))
 		println("\nAs JSON:")
@@ -157,24 +184,18 @@ package info.paygoo.core {
 		println(c.ser(format=Text))
 		println("\nAs RDF/NTriple:")
 		println(c.ser(format=NTriple))
-		println(c)
 
-		println("\n\nNow adding " + r1.label + " and " + r2.label)
+		println("\nNow adding " + r1.label + " and " + r2.label)
 		c.add(r1)
 		c.add(r2)
 		println("\nAs HTML:")
 		println(c.ser(format=HTML))
 		println("\nAs JSON:")
 		println(c.ser(format=JSON))
-		
-		println("\n\nNow removing " + r1.label)
-		c.remove(r1)
-		println("\nAs HTML:")
-		println(c.ser(format=HTML))
-		println("\nAs JSON:")
-		println(c.ser(format=JSON))
-		
-
+		println("\nAs plain text:")
+		println(c.ser(format=Text))
+		println("\nAs RDF/NTriple:")
+		println(c.ser(format=NTriple))
 	}
 
 	// TODO: Implement PayGooDataset
