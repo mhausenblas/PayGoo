@@ -21,7 +21,7 @@ package info.paygoo.core {
 	object NTriple extends WireFormat ( mediatype = "text/plain", target = "machine" )
 
 	/** 
-	 * The core PayGoo class, just has a label. 
+	 * The core PayGoo class, just has an identifier and a label. 
 	 * 
 	 * @param id the PayGoo identifier, MUST be a HTTP URI
 	 * @param label a human-readable label for the PayGoo
@@ -38,7 +38,7 @@ package info.paygoo.core {
 	}
 
 	/** 
-	 * The PayGoo resource class. 
+	 * The PayGoo resource class, a useful basis for realising a Basic Profile Resource (BPR).
 	 */
 	case class PayGooResource (rpgid: String, rlabel: String ) extends PayGoo ( rpgid, rlabel ) {
 		private var r = Map ( "id" -> rpgid, "label" -> rlabel, "modified" -> new LocalDate().toString)
@@ -78,7 +78,7 @@ package info.paygoo.core {
 	}
 	
 	/** 
-	 * The PayGoo container class. 
+	 * The PayGoo container class, a useful basis for realising a Basic Profile Container (BPC).
 	 */
 	case class PayGooContainer (cpgid: String, clabel: String ) extends PayGoo ( cpgid, clabel ) {
 		private var c = Map ( "id" -> cpgid, "label" -> clabel, "modified" -> new LocalDate().toString)
@@ -184,8 +184,7 @@ package info.paygoo.core {
 		println(c.ser(format=NTriple))
 	}
 
-	// TODO: Implement PayGooDataset
-	
+	// TODO: implement PayGooDataset, a special PayGooContainer that has no parent and represents an entire dataset
 
 }
 

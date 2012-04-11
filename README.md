@@ -14,45 +14,28 @@ Then you can run the built-in test like so:
 
 ... which should yield something like the following:
 
+	[PayGooContainer: id=http://data.example.com/#container | label=a simple container | modified=2012-04-11]
+
 	As HTML:
-	<div>About <a href='http://data.example.com/#container'>a simple container</a>, last updated 2012-04-10 containing: no members</div>
+	<div>About <a href='http://data.example.com/#container'>a simple container</a>, last updated 2012-04-11 containing: <ul><li><a href='http://data.example.com/#res1'>resource 1</a></li><li><a href='http://data.example.com/#res2'>resource 2</a></li></ul></div>
 
 	As JSON:
-	{}
+	{"container" : {"id" : "http:\/\/data.example.com\/#container", "label" : "a simple container", "modified" : "2012-04-11"}, "members" : ["http:\/\/data.example.com\/#res1", "http:\/\/data.example.com\/#res2"]}
 
 	As plain text:
-	id=http://data.example.com/#container, label=a simple container, modified=2012-04-10
+	id=http://data.example.com/#container, label=a simple container, modified=2012-04-11, containing: [id=http://data.example.com/#res1, label=resource 1, modified=2012-04-11id=http://data.example.com/#res2, label=resource 2, modified=2012-04-11]
 
 	As RDF/NTriple:
 	<http://data.example.com/#container> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://open-services.net/ns/basicProfile#Container> .
+	<http://data.example.com/#container> <http://www.w3.org/2000/01/rdf-schema#member> "http://data.example.com/#res2" .
 	<http://data.example.com/#container> <http://purl.org/dc/terms/title> "a simple container" .
-	<http://data.example.com/#container> <http://purl.org/dc/terms/modified> "2012-04-10" .
-
-	[PayGooContainer: id=http://data.example.com/#container | label=a simple container | modified=2012-04-10]
-
-
-	Now adding resource 1 and resource 2
-
-	As HTML:
-	<div>About <a href='http://data.example.com/#container'>a simple container</a>, last updated 2012-04-10 containing: <div>About <a href='http://data.example.com/#res1'>resource 1</a>, last updated 2012-04-10</div><div>About <a href='http://data.example.com/#res2'>resource 2</a>, last updated 2012-04-10</div></div>
-
-	As JSON:
-	{"container" : {"id" : "http:\/\/data.example.com\/#container", "label" : "a simple container", "modified" : "2012-04-10"}, "members" : ["http:\/\/data.example.com\/#res1", "http:\/\/data.example.com\/#res2"]}
-
-
-	Now removing resource 1
-
-	As HTML:
-	<div>About <a href='http://data.example.com/#container'>a simple container</a>, last updated 2012-04-10 containing: <div>About <a href='http://data.example.com/#res2'>resource 2</a>, last updated 2012-04-10</div></div>
-
-	As JSON:
-	{"container" : {"id" : "http:\/\/data.example.com\/#container", "label" : "a simple container", "modified" : "2012-04-10"}, "members" : ["http:\/\/data.example.com\/#res2"]}
+	<http://data.example.com/#container> <http://www.w3.org/2000/01/rdf-schema#member> "http://data.example.com/#res1" .
+	<http://data.example.com/#container> <http://purl.org/dc/terms/modified> "2012-04-11" .
 	
 ## Dependencies
 
 * Tested against Scala 2.9.1
 * Using [scardf](http://code.google.com/p/scardf/ "Scala RDF API - Google Project Hosting") for RDF parsing and serialisation
-* Using Scalatra for HTTP interfacing
 
 ## License
 
