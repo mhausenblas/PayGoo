@@ -59,6 +59,8 @@ package info.paygoo.core {
 		override def toString = "[PayGooResource: id=" + r("id") + " | label=" + r("label") + " | modified=" + r("modified") + "]"
 		
 		def raw = r
+		
+		// TODO: implement adding a payload via add and +
 	}
 	
 	/** 
