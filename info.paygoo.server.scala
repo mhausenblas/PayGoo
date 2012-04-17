@@ -44,15 +44,26 @@ package info.paygoo.server {
 	}
 
 	abstract class SimpleHttpServer extends SimpleHttpServerBase {
-		private val mappings = new HashMap[String, (String) => Any]
+		// private val mappings = new HashMap[String, (String) => Any]
+		// def get(path: String, mediatype: String = "text/html")(action: => Any) = mappings += ( mediatype + " " + path ) -> ((mediatype) => action)
+
+		private val mappings = new HashMap[String, () => String]
+				
+		def mapGET(gethandler: String => String, path: String, mediatype: String = "text/html") {
+			mappings += ( mediatype + " " + path ) -> (() => gethandler(mediatype))
+		}
 		
-		def get(path: String, mediatype: String = "text/html")(action: => Any) = mappings += ( mediatype + " " + path ) -> ((mediatype) => action)
+		def pickWF(mediatype : String) = mediatype match {
+			case HTML.mediatype => HTML
+			case JSON.mediatype => JSON
+			case NTriple.mediatype => NTriple
+		}
 		
 		def handle(exchange: HttpExchange) = {
 			val h = exchange.getRequestHeaders()
 			var q = exchange.getRequestURI.toString
 			var accept = "text/html"
-
+			
 			// heads-up: very naive conneg implementation following
 			if (h.containsKey("Accept")) {
 				// danger, the following is really a nasty hack: 
@@ -77,12 +88,12 @@ package info.paygoo.server {
 				}
 			}
 			
-			// essentially map to combintation of media type + path (as a key):
+			//essentially map to combintation of media type + path (as a key):
 			mappings.get(accept + " " + exchange.getRequestURI.getPath) match {
-				case None => respond(exchange, 404)
+				case None => respond(exchange, 404, "404 - Not found ...")
 				case Some(action) =>
 					try {
-						respond(exchange, 200, action(accept).toString, accept) 
+						respond(exchange, 200, action(), accept) 
 					} catch {
 						case ex: Exception => respond(exchange, 500, ex.toString)
 					}
@@ -98,46 +109,30 @@ package info.paygoo.server {
 	 */
 	class PayGooServer extends SimpleHttpServer {
 		val BASE_URI = "http://localhost:6969"
-		val c = new PayGooContainer(BASE_URI + "/bpc0", "container 0")
-		val r1 = new PayGooResource(BASE_URI + "/res1", "resource 1")
-		val r2 = new PayGooResource(BASE_URI + "/res2", "resource 2")
+		val paths : List[String] = List("/bpc0", "/res1","/res2")
+		
+		val c = new PayGooContainer(BASE_URI + paths(0), "container 0")
+		val r1 = new PayGooResource(BASE_URI + paths(1), "resource 1")
+		val r2 = new PayGooResource(BASE_URI + paths(2), "resource 2")
 		c.add(r1)
 		c.add(r2)
 		
-		get("/bpc0") {
-			c.ser(format=HTML)
-		}
-		get("/bpc0", JSON.mediatype) {
-			c.ser(format=JSON)
-		}
-		get("/bpc0", NTriple.mediatype) {
-			c.ser(format=NTriple)
-		}
+		val paygoos : List[PayGoo] = List(c, r1, r2)
+		val wireformats : List[WireFormat] = List(HTML, JSON, NTriple)
 		
-		get("/res1") {
-			r1.ser(format=HTML)
+		for (pg <- paygoos) {
+			for (wf <- wireformats)  {
+				//println("Created:" + pg + " for " + wf)
+				mapGET({ wf => pg.ser(format=pickWF(wf)) }, pg.path, wf.mediatype )
+			}
 		}
-		get("/res1", JSON.mediatype) {
-			r1.ser(format=JSON)
-		}
-		get("/res1", NTriple.mediatype) {
-			r1.ser(format=NTriple)
-		}
-		
-		get("/res2") {
-			r2.ser(format=HTML)
-		}
-		get("/res2", JSON.mediatype) {
-			r2.ser(format=JSON)
-		}
-		get("/res2", NTriple.mediatype) {
-			r2.ser(format=NTriple)
-		}
-		
+		//TODO - add defaults, that is, currently curl http://localhost:6969/bpc0 404s but should return HTML representation
+		//TODO - add PUT/POST and DELETE support
 	}
 
 	object PayGooServer extends App {
 		val server = new PayGooServer()
 		server.start()
 	}
+	
 }

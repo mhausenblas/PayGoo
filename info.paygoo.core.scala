@@ -35,6 +35,11 @@ package info.paygoo.core {
 		 * @return a string representation in the selected wire format
 		 */
 		def ser( format: WireFormat = JSON ) : String
+		
+		def path : String = {
+			val u = new java.net.URL(pgid)
+			u.getPath
+		}
 	}
 
 	/** 
