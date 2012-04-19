@@ -63,8 +63,11 @@ After that, point your Web browser to `http://localhost:6969/bpc0` and you shoul
 	<div>About <a href='http://localhost:6969/bpc0'>container 0</a>, last updated 2012-04-11 containing: <ul><li><a href='http://localhost:6969/res1'>resource 1</a></li><li><a href='http://localhost:6969/res2'>resource 2</a></li></ul></div>
 	
 You get the idea, right? Either you tell the PayGooServer via [conneg](http://en.wikipedia.org/wiki/Content_negotiation "Content negotiation - Wikipedia, the free encyclopedia") what format you prefer or you can specify it explicitly by appending a query parameter `?xxx` where xxx can be one of the following: `json`, `html` or `ntriple` which overwrites the conneg.
-	
-	
+
+
+And now let's create a new resource in an existing container:
+
+	curl -H "Content-Type: application/json" -X POST --data "@test/res3.nt" http://localhost:6969/bpc0
 
 ## Dependencies
 

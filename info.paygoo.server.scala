@@ -58,11 +58,26 @@ package info.paygoo.server {
 		}
 		
 		def handle(exchange: HttpExchange) = {
+			val method =  exchange.getRequestMethod()
+			method match {
+				case "GET" => handleGET(exchange)
+				case "POST" => notSupported(exchange)
+				case "PUT" => notSupported(exchange)
+				case "DELETE" => notSupported(exchange)
+				case _ => notSupported(exchange)
+			}
+		}
+
+		def notSupported(exchange: HttpExchange) = {
+			respond(exchange, 501, "501 - Not Implemented\nThe "+ exchange.getRequestMethod() + " method is not supported, yet.\n", Text.mediatype) 
+		}
+		
+		def handleGET(exchange: HttpExchange) = {
 			val h = exchange.getRequestHeaders()
 			var q = exchange.getRequestURI.toString
 			var accept = defaultMediaType
 			var conneg = ""
-			
+
 			// heads-up: very naive conneg implementation following
 			if (h.containsKey("Accept")) {
 				// danger, the following is really a nasty hack: 
@@ -95,7 +110,7 @@ package info.paygoo.server {
 			
 			//essentially map to combintation of media type + path (as a key):
 			mappings.get(accept + " " + exchange.getRequestURI.getPath) match {
-				case None => respond(exchange, 404, "404 - Not found ...")
+				case None => respond(exchange, 404, "404 - Not found\n")
 				case Some(action) =>
 					try {
 						respond(exchange, 200, action(), accept) 
@@ -113,18 +128,21 @@ package info.paygoo.server {
 	 * @return dunno
 	 */
 	class PayGooServer extends SimpleHttpServer(defaultMediaType = JSON.mediatype) {
+		
+		// setting up the paygoos; this would typically come from a datasource (RDB, CSV or triple store):
 		val BASE_URI = "http://localhost:6969"
 		val paths : List[String] = List("/bpc0", "/res1","/res2")
-		
 		val c = new PayGooContainer(BASE_URI + paths(0), "container 0")
 		val r1 = new PayGooResource(BASE_URI + paths(1), "resource 1")
 		val r2 = new PayGooResource(BASE_URI + paths(2), "resource 2")
 		c.add(r1)
 		c.add(r2)
 		
+		// setting up the HTTP interface for the paygoos:
 		val paygoos : List[PayGoo] = List(c, r1, r2)
 		val wireformats : List[WireFormat] = List(HTML, JSON, NTriple)
-		
+
+		// setting up the HTTP interface - GET part:
 		for (pg <- paygoos) {
 			for (wf <- wireformats)  {
 				//println("Created:" + pg + " for " + wf)
