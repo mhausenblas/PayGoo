@@ -67,7 +67,7 @@ You get the idea, right? Either you tell the PayGooServer via [conneg](http://en
 
 And now let's create a new resource in an existing container:
 
-	curl -H "Content-Type: application/json" -X POST --data "@test/res3.nt" http://localhost:6969/bpc0
+	curl -H "Content-Type: text/plain" -X POST --data "@test/res3.nt" http://localhost:6969/bpc0
 
 ## Dependencies
 

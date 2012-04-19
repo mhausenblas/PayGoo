@@ -45,10 +45,15 @@ package info.paygoo.server {
 
 	abstract class SimpleHttpServer(val defaultMediaType: String = "text/html") extends SimpleHttpServerBase {
 
-		private val mappings = new HashMap[String, () => String]
-				
-		def mapGET(gethandler: String => String, path: String, mediatype: String = "text/html") {
-			mappings += ( mediatype + " " + path ) -> (() => gethandler(mediatype))
+		private val mappingsGET = new HashMap[String, () => String]
+		private val mappingsPOST = new HashMap[String, String => String]
+		
+		def mapGET(gethandler: String => String, path: String, mediatype: String = defaultMediaType) {
+			mappingsGET += ( mediatype + " " + path ) -> (() => gethandler(mediatype))
+		}
+		
+		def mapPOST(posthandler: (String, String) => String, path: String, mediatype: String) {
+			mappingsPOST += ( mediatype + " " + path ) -> ((payload) => posthandler(mediatype, payload))
 		}
 		
 		def pickWF(mediatype : String) = mediatype match {
@@ -61,7 +66,7 @@ package info.paygoo.server {
 			val method =  exchange.getRequestMethod()
 			method match {
 				case "GET" => handleGET(exchange)
-				case "POST" => notSupported(exchange)
+				case "POST" => handlePOST(exchange)
 				case "PUT" => notSupported(exchange)
 				case "DELETE" => notSupported(exchange)
 				case _ => notSupported(exchange)
@@ -109,7 +114,7 @@ package info.paygoo.server {
 			}
 			
 			//essentially map to combintation of media type + path (as a key):
-			mappings.get(accept + " " + exchange.getRequestURI.getPath) match {
+			mappingsGET.get(accept + " " + exchange.getRequestURI.getPath) match {
 				case None => respond(exchange, 404, "404 - Not found\n")
 				case Some(action) =>
 					try {
@@ -119,6 +124,34 @@ package info.paygoo.server {
 					}
 			}
 		}
+		
+		def handlePOST(exchange: HttpExchange) = {
+			val h = exchange.getRequestHeaders()
+			var q = exchange.getRequestURI.toString
+			var ct = "text/plain" // defaults to NTriple payload
+			val payload = scala.io.Source.fromInputStream(exchange.getRequestBody).getLines().mkString("\n") // read the raw payload from request body
+
+			if (h.containsKey("Content-Type")) {
+				try {
+					ct = h.getFirst("Content-Type")
+				} finally {
+				}
+			}
+			
+			println(payload)
+			
+			mappingsPOST.get(ct + " " + exchange.getRequestURI.getPath) match {
+				case None => respond(exchange, 404, "404 - Not found\n")
+				case Some(action) =>
+					try {
+						respond(exchange, 201, action(payload), Text.mediatype) 
+					} catch {
+						case ex: Exception => respond(exchange, 500, ex.toString)
+					}
+			}
+		}
+		
+		
 	}
 
 	/** 
@@ -149,7 +182,9 @@ package info.paygoo.server {
 				mapGET({ wf => pg.ser(format=pickWF(wf)) }, pg.path, wf.mediatype )
 			}
 		}
-		//TODO - add PUT/POST and DELETE support
+		
+		// setting up the HTTP interface - POST part:
+		mapPOST({ (NTriple, payload) => payload }, c.path, NTriple.mediatype )
 	}
 
 	object PayGooServer extends App {
