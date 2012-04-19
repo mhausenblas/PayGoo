@@ -43,9 +43,7 @@ package info.paygoo.server {
 		def stop(delay: Int = 1) = server.stop(delay)
 	}
 
-	abstract class SimpleHttpServer extends SimpleHttpServerBase {
-		// private val mappings = new HashMap[String, (String) => Any]
-		// def get(path: String, mediatype: String = "text/html")(action: => Any) = mappings += ( mediatype + " " + path ) -> ((mediatype) => action)
+	abstract class SimpleHttpServer(val defaultMediaType: String = "text/html") extends SimpleHttpServerBase {
 
 		private val mappings = new HashMap[String, () => String]
 				
@@ -62,15 +60,22 @@ package info.paygoo.server {
 		def handle(exchange: HttpExchange) = {
 			val h = exchange.getRequestHeaders()
 			var q = exchange.getRequestURI.toString
-			var accept = "text/html"
+			var accept = defaultMediaType
+			var conneg = ""
 			
 			// heads-up: very naive conneg implementation following
 			if (h.containsKey("Accept")) {
 				// danger, the following is really a nasty hack: 
 				// in case a user agent, such a Web browser, sends 
-				// multiple desired types, simply take the first one.
+				// multiple desired types, simply take the first one 
+				// and in doubt, serve the default
 				// see also http://tools.ietf.org/html/rfc2616#section-14.1
-				accept = h.getFirst("Accept").split(",")(0)
+				try {
+					conneg = h.getFirst("Accept").split(",")(0)
+				} finally {
+					if (conneg contains "*/*") accept = defaultMediaType
+					else accept = conneg
+				}
 			}
 			
 			// a query paramter such as ?json or ?html indicating the desired format overwrites conneg
@@ -81,7 +86,7 @@ package info.paygoo.server {
 						case "html" => accept = HTML.mediatype
 						case "json" => accept = JSON.mediatype
 						case "ntriple" => accept = NTriple.mediatype
-						case _ => accept = HTML.mediatype
+						case _ => accept = defaultMediaType
 					}
 				} catch {
 					case ex: Exception => respond(exchange, 500, ex.toString)
@@ -107,7 +112,7 @@ package info.paygoo.server {
 	 * 
 	 * @return dunno
 	 */
-	class PayGooServer extends SimpleHttpServer {
+	class PayGooServer extends SimpleHttpServer(defaultMediaType = JSON.mediatype) {
 		val BASE_URI = "http://localhost:6969"
 		val paths : List[String] = List("/bpc0", "/res1","/res2")
 		
@@ -126,7 +131,6 @@ package info.paygoo.server {
 				mapGET({ wf => pg.ser(format=pickWF(wf)) }, pg.path, wf.mediatype )
 			}
 		}
-		//TODO - add defaults, that is, currently curl http://localhost:6969/bpc0 404s but should return HTML representation
 		//TODO - add PUT/POST and DELETE support
 	}
 
