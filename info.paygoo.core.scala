@@ -1,5 +1,6 @@
 package info.paygoo.core {
 
+	import collection.mutable.HashMap
 	import scala.collection.mutable.ArrayBuffer
 	import scala.actors.Actor
 	import scala.actors.Actor._
@@ -7,6 +8,7 @@ package info.paygoo.core {
 	import org.scardf._
 	import org.joda.time.LocalDate
 	import info.paygoo.vocab._
+	import java.io.StringReader
 	
 	/** 
 	 * Represents a PayGoo's serialisation (aka wire format).
@@ -17,7 +19,6 @@ package info.paygoo.core {
 	case class WireFormat ( val mediatype: String, val target: String )
 	object HTML extends WireFormat ( mediatype = "text/html", target = "human" )
 	object JSON extends WireFormat ( mediatype = "application/json", target = "machine" )
-	object Text extends WireFormat ( mediatype = "text/plain", target = "human" )
 	object NTriple extends WireFormat ( mediatype = "text/plain", target = "machine" )
 
 	/** 
@@ -31,15 +32,36 @@ package info.paygoo.core {
 		/** 
 		 * Returns a serialisation in the specified format, defaults to JSON.
 		 * 
-		 * @param format the selected wire format, one of {HTML, JSON, Text, NTriple}
+		 * @param format the selected wire format, one of {HTML, JSON, NTriple}
 		 * @return a string representation in the selected wire format
 		 */
 		def ser( format: WireFormat = JSON ) : String
+		
+		
+		/** 
+		 * Maps a media type string into one of the wire formats
+		 * 
+		 * @param format the IANA media type as a string
+		 * @return an object of type WireFormat
+		 */
+		def mt2wf( format: String = JSON.mediatype ) : WireFormat = format match {
+				case HTML.mediatype => HTML
+				case JSON.mediatype => JSON
+				case NTriple.mediatype => NTriple
+		}
 		
 		def path : String = {
 			val u = new java.net.URL(pgid)
 			u.getPath
 		}
+		
+		def baseURI : String = {
+			val u = new java.net.URL(pgid)
+			
+			if(u.getPort == -1) "http://" + u.getHost
+			else "http://" + u.getHost + ":" + u.getPort
+		}
+		
 	}
 
 	/** 
@@ -47,25 +69,27 @@ package info.paygoo.core {
 	 */
 	case class PayGooResource (rpgid: String, rlabel: String ) extends PayGoo ( rpgid, rlabel ) {
 		private var r = Map ( "id" -> rpgid, "label" -> rlabel, "modified" -> new LocalDate().toString)
+		private var p = ""
 		
 		override def ser ( format: WireFormat = JSON ) : String = format match {
 			case HTML => "<div>About <a href='" + r("id") + "'>" + r("label") + "</a>, last updated " + r("modified") + "</div>"
 			case JSON => JSONObject(r).toString
-			case Text => "id=" + r("id") + ", label=" + r("label") + ", modified=" + r("modified") 
 			case NTriple => val g = Graph.build(	UriRef( r("id").toString ) - (
 													RDF.Type -> SchemaOrg.Thing,
 													DC.title ->  r("label"),
 													DC.modified ->  r("modified")
 												)
-									)
+									) ++ new Serializator(org.scardf.NTriple).readFrom( new StringReader( p ) )
 									g.rend
 		}
-
+		
 		override def toString = "[PayGooResource: id=" + r("id") + " | label=" + r("label") + " | modified=" + r("modified") + "]"
 		
 		def raw = r
 		
-		// TODO: implement adding a payload via add and +
+		def set ( payload : String,  mediatype: String ) {
+			p = payload
+		}
 	}
 	
 	/** 
@@ -78,8 +102,6 @@ package info.paygoo.core {
 		println(r.ser(format=HTML))
 		println("\nAs JSON:")
 		println(r.ser(format=JSON))
-		println("\nAs plain text:")
-		println(r.ser(format=Text))
 		println("\nAs RDF/NTriple:")
 		println(r.ser(format=NTriple))
 	}
@@ -89,12 +111,12 @@ package info.paygoo.core {
 	 */
 	case class PayGooContainer (cpgid: String, clabel: String ) extends PayGoo ( cpgid, clabel ) {
 		private var c = Map ( "id" -> cpgid, "label" -> clabel, "modified" -> new LocalDate().toString)
-		private var members = ArrayBuffer[PayGooResource]()
+		//private var members = ArrayBuffer[PayGooResource]()
+		private val members = new HashMap[String, PayGooResource]
 		
 		override def ser ( format: WireFormat = JSON ) : String = format match {
 			case HTML => serContainerHTML
 			case JSON => serContainerJSON
-			case Text => serContainerText 
 			case NTriple => serContainerNTriple
 		}
 		
@@ -103,7 +125,7 @@ package info.paygoo.core {
 			
 			if ( !members.isEmpty ) {
 				ret = "<div>About <a href='" + c("id") + "'>" + c("label") + "</a>, last updated " + c("modified") + " containing: <ul>" 
-				for (m <- members)
+				for ( (rid, m) <- members)
 					ret += "<li><a href='" + m.raw("id") + "'>" + m.raw("label") + "</a></li>"
 				ret += "</ul></div>"
 			}
@@ -114,37 +136,25 @@ package info.paygoo.core {
 			var ret : String = "{}"
 			
 			if ( !members.isEmpty ){
-				val m = for ( i <- 0 until members.length ) yield members(i).raw("id")
+				val m = for ( (rid, m) <- members ) yield m.raw("id")
 				var con = Map ( "container" -> JSONObject(c), "members" ->  JSONArray(m.toList) )
 				ret = JSONObject(con).toString	
 			} 
 			ret
 		}
-		
-		def serContainerText : String = {
-			var ret : String = "no members"
-			
-			if ( !members.isEmpty ) {
-				ret = "id=" + c("id") + ", label=" + c("label") + ", modified=" + c("modified") + ", containing: [" 
-				for (m <- members)
-					ret += m.ser(format=Text)
-				ret += "]"
-			}
-			ret
-		}
-		
+				
 		def serContainerNTriple : String = {
 			var ret : String = ""
 			
 			if ( !members.isEmpty ){
-				val m = for ( i <- 0 until members.length ) yield members(i).raw("id")
+				val m = for ( (rid, m) <- members ) yield m.raw("id")
 				var g = Graph.build(	UriRef( c("id").toString ) - (
 														RDF.Type -> LDBP.Container,
 														DC.title ->  c("label"),
 														DC.modified ->  c("modified")
 													)
 										)
-				for (m <- members)
+				for ( (rid, m)  <- members)
 					g = g ++  Graph.build( UriRef( c("id").toString ) - (RDFS.member -> m.raw("id").toString ) )
 				ret = g.rend
 			} 
@@ -153,42 +163,53 @@ package info.paygoo.core {
 
 		override def toString = "[PayGooContainer: id=" + c("id") + " | label=" + c("label") + " | modified=" + c("modified") + "]"
 		
-		def add ( member : PayGooResource ) = {
-			members += member
+		// adds in a way that it takes a payload (JSON/RDF), creates a new resource in the container and returns its HTTP URI
+		def add( payload: String, mediatype: String ) : String = {
+			val rid = baseURI + "/" + java.util.UUID.randomUUID().toString
+			val r = new PayGooResource(rid, "resource in container " + clabel)
+			r.set(payload, mediatype)
+			_add(rid, r)
+			rid
 		}
 
-		def remove ( member : PayGooResource ) : Unit = {
-			for (i <- 0 until members.length) {
-				if (members(i).rpgid == member.rpgid) {
-					members.remove(i)
-					return
-				}
-			}
+		
+		private def _add (resURI: String, member: PayGooResource ) = {
+			members += resURI -> member
+		}
+
+		// remove so that it removes resource in the container
+		def remove ( resURI: String ) : Unit = {
+			members.remove(resURI)
 		}
 		
-		def list = {
-			members.toArray
+		def get ( resURI: String ) : PayGooResource = {
+			members(resURI)
 		}
+
 	}
+	
+	
 	
 	/** 
 	 * Testing a sample PayGoo container.
 	 */
 	object PayGooContainer extends App {
 		val c = new PayGooContainer("http://data.example.com/#container", "a simple container")
-		val r1 = new PayGooResource("http://data.example.com/#res1", "resource 1")
-		val r2 = new PayGooResource("http://data.example.com/#res2", "resource 2")
-		c.add(r1)
-		c.add(r2)
+		val rID = c.add( scala.io.Source.fromFile("test/payload.nt").mkString , "text/plain")
 		println(c)
 		println("\nAs HTML:")
 		println(c.ser(format=HTML))
 		println("\nAs JSON:")
 		println(c.ser(format=JSON))
-		println("\nAs plain text:")
-		println(c.ser(format=Text))
 		println("\nAs RDF/NTriple:")
 		println(c.ser(format=NTriple))
+		
+		println("\nNew resource:")
+		println(c.get(rID).ser(format=NTriple))
+		c.remove(rID)
+		println("\n ... now removed ...")
+		println(c.ser(format=NTriple))
+		
 	}
 
 	// TODO: implement PayGooDataset, a special PayGooContainer that has no parent and represents an entire dataset
