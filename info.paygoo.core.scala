@@ -145,19 +145,20 @@ package info.paygoo.core {
 				
 		def serContainerNTriple : String = {
 			var ret : String = ""
+			var g = Graph.build(	UriRef( c("id").toString ) - (
+													RDF.Type -> LDBP.Container,
+													DC.title ->  c("label"),
+													DC.modified ->  c("modified")
+													)
+								)
 			
 			if ( !members.isEmpty ){
 				val m = for ( (rid, m) <- members ) yield m.raw("id")
-				var g = Graph.build(	UriRef( c("id").toString ) - (
-														RDF.Type -> LDBP.Container,
-														DC.title ->  c("label"),
-														DC.modified ->  c("modified")
-													)
-										)
+
 				for ( (rid, m)  <- members)
-					g = g ++  Graph.build( UriRef( c("id").toString ) - (RDFS.member -> m.raw("id").toString ) )
-				ret = g.rend
+					g = g ++ Graph.build( UriRef( c("id").toString ) - ( RDFS.member -> UriRef( m.raw("id").toString ) ) )
 			} 
+			ret = g.rend
 			ret
 		}
 
