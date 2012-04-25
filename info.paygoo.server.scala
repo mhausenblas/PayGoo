@@ -166,13 +166,13 @@ package info.paygoo.server {
 		val BASE_URI = "http://localhost:6969"
 		val paths : List[String] = List("/bpc0", "/res1","/res2")
 		val c = new PayGooContainer(BASE_URI + paths(0), "container 0")
-		val r1 = new PayGooResource(BASE_URI + paths(1), "resource 1")
-		val r2 = new PayGooResource(BASE_URI + paths(2), "resource 2")
-		c.add(r1)
-		c.add(r2)
+		// val r1 = new PayGooResource(BASE_URI + paths(1), "resource 1")
+		// val r2 = new PayGooResource(BASE_URI + paths(2), "resource 2")
+		// c.add(r1)
+		// c.add(r2)
 		
 		// setting up the HTTP interface for the paygoos:
-		val paygoos : List[PayGoo] = List(c, r1, r2)
+		val paygoos : List[PayGoo] = List(c)//, r1, r2)
 		val wireformats : List[WireFormat] = List(HTML, JSON, NTriple)
 
 		// setting up the HTTP interface - GET part:
@@ -184,7 +184,7 @@ package info.paygoo.server {
 		}
 		
 		// setting up the HTTP interface - POST part:
-		mapPOST({ (NTriple, payload) => payload }, c.path, NTriple.mediatype )
+		mapPOST({ (NTriple, payload) =>  c.add( payload , "text/plain") }, c.path, NTriple.mediatype )
 	}
 
 	object PayGooServer extends App {

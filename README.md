@@ -68,6 +68,18 @@ You get the idea, right? Either you tell the PayGooServer via [conneg](http://en
 And now let's create a new resource in an existing container:
 
 	curl -H "Content-Type: text/plain" -X POST --data "@test/res3.nt" http://localhost:6969/bpc0
+	
+
+RESTful action mappings:
+
+	method  BPC               BPR
+	------------------------------------------
+	GET     200:JSON/NT/HTML  200:JSON/NT/HTML    
+	POST    201:JSON/NT       501
+	PUT     409               200:JSON/NT
+	DELETE  200               200
+
+
 
 ## Dependencies
 
